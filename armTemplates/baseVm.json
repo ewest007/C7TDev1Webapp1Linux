@@ -1,0 +1,97 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "adminUsername": { "type": "string" },
+      "adminPassword": { "type": "securestring" }
+    },
+    "variables": {
+      "vnetID": "[resourceId('Microsoft.Network/virtualNetworks','infrastructure-vnet')]", 
+      "subnetRef": "[concat(variables('vnetID'),'/subnets/app-subnet')]" 
+    },
+    "resources": [
+      {
+        "apiVersion": "2016-03-30",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "app-vm-publicip",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic"
+        }
+      },
+      {
+        "apiVersion": "2016-03-30",
+        "type": "Microsoft.Network/virtualNetworks",
+        "name": "infrastructure-vnet",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "addressSpace": { "addressPrefixes": [ "10.0.0.0/16" ] },
+          "subnets": [
+            {
+              "name": "app-subnet",
+              "properties": { "addressPrefix": "10.0.0.0/24" }
+            }
+          ]
+        }
+      },
+      {
+        "apiVersion": "2016-03-30",
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "app-vm-nic",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/publicIPAddresses/', 'app-vm-publicip')]",
+          "[resourceId('Microsoft.Network/virtualNetworks/', 'infrastructure-vnet')]"
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses','app-vm-publicip')]" },
+                "subnet": { "id": "[variables('subnetRef')]" }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "apiVersion": "2016-04-30-preview",
+        "type": "Microsoft.Compute/virtualMachines",
+        "name": "app-vm",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/networkInterfaces/', 'app-vm-nic')]"
+        ],
+        "properties": {
+          "hardwareProfile": { "vmSize": "Standard_D2_v3" },
+          "osProfile": {
+            "computerName": "app-vm",
+            "adminUsername": "[parameters('adminUsername')]",
+            "adminPassword": "[parameters('adminPassword')]"
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "Canonical",
+              "offer": "UbuntuServer",
+              "sku": "16.04-LTS",
+              "version": "latest"
+            },
+            "osDisk": {
+              "name": "myManagedOSDisk",
+              "caching": "ReadWrite",
+              "createOption": "FromImage"
+            }
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces','app-vm-nic')]"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
