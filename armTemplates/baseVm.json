@@ -3,11 +3,11 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "adminUsername": { "type": "string" },
-      "adminPassword": { "type": "securestring" }
+      "adminPassword": { "type": "securestring" },
+      "vnetID": { "type": "string" }
     },
     "variables": {
-      "vnetID": "[resourceId('Microsoft.Network/virtualNetworks','infrastructure-vnet')]", 
-      "subnetRef": "[concat(variables('vnetID'),'/subnets/app-subnet')]" 
+      "subnetRef": "[concat(parameters('vnetID'),'/subnets/app-subnet')]" 
     },
     "resources": [
       {
@@ -21,27 +21,11 @@
       },
       {
         "apiVersion": "2016-03-30",
-        "type": "Microsoft.Network/virtualNetworks",
-        "name": "infrastructure-vnet",
-        "location": "[resourceGroup().location]",
-        "properties": {
-          "addressSpace": { "addressPrefixes": [ "10.0.0.0/16" ] },
-          "subnets": [
-            {
-              "name": "app-subnet",
-              "properties": { "addressPrefix": "10.0.0.0/24" }
-            }
-          ]
-        }
-      },
-      {
-        "apiVersion": "2016-03-30",
         "type": "Microsoft.Network/networkInterfaces",
         "name": "app-vm-nic",
         "location": "[resourceGroup().location]",
         "dependsOn": [
-          "[resourceId('Microsoft.Network/publicIPAddresses/', 'app-vm-publicip')]",
-          "[resourceId('Microsoft.Network/virtualNetworks/', 'infrastructure-vnet')]"
+          "[resourceId('Microsoft.Network/publicIPAddresses/', 'app-vm-publicip')]"
         ],
         "properties": {
           "ipConfigurations": [
@@ -79,7 +63,7 @@
               "version": "latest"
             },
             "osDisk": {
-              "name": "myManagedOSDisk",
+              "name": "os-disk",
               "caching": "ReadWrite",
               "createOption": "FromImage"
             }
