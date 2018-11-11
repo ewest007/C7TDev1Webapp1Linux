@@ -13,6 +13,8 @@ param(
     [string]$vnetName = "vnet"
 )
 
+$vmName = "test-vm"
+
 Write-Output "Please enter the credentials that will be used for the VM"
 
 if ($null -eq $adminCreds) {
@@ -23,12 +25,21 @@ New-AzureRmResourceGroup -Name $resourceGroupName -Location $deploymentLocation
 
 $vnetDeploymentParams = @{ "vnetName" = $vnetName }
 
-$vnet = New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name "deploy-infrastructure" `
+Write-Output "Deploying vnet:"
+try {
+    $vnet = New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name "deploy_vnet_$($vnetName)" `
                                     -TemplateUri $vnetTemplatePath -TemplateParameterObject $vnetDeploymentParams `
                                     -Verbose
+} catch {
+    write-error "Could not deploy vnet. This is a requirement so will exit now"
+    exit 1
+}
 
-$vmDeploymentParams = @{ "adminUsername" = $adminCreds.UserName; "adminPassword" = $adminCreds.Password; "vnetID" = $vnet.outputs.vnetID.value}
+$vmDeploymentParams = @{ "vmName" = $vmName; "adminUsername" = $adminCreds.UserName; "adminPassword" = $adminCreds.Password; "vnetID" = $vnet.outputs.vnetID.value}
 
-New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name "deploy-infrastructure" `
+$vm = New-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -Name "deploy_VM_$($vmName)" `
                                     -TemplateUri $vmTemplatePath -TemplateParameterObject $vmDeploymentParams `
                                     -Verbose
+
+
+.\Provision-ViaSSH.ps1 -VmCreds $adminCreds -VmIp $vm.Outputs.vmIp.Value -ScriptPath .\provisioning\nodeServer.sh

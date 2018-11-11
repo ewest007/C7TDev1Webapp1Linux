@@ -4,7 +4,8 @@
     "parameters": {
       "adminUsername": { "type": "string" },
       "adminPassword": { "type": "securestring" },
-      "vnetID": { "type": "string" }
+      "vnetID": { "type": "string" },
+      "vmName": { "type": "string" } 
     },
     "variables": {
       "subnetRef": "[concat(parameters('vnetID'),'/subnets/app-subnet')]" 
@@ -16,7 +17,7 @@
         "name": "app-vm-publicip",
         "location": "[resourceGroup().location]",
         "properties": {
-          "publicIPAllocationMethod": "Dynamic"
+          "publicIPAllocationMethod": "Static"
         }
       },
       {
@@ -43,7 +44,7 @@
       {
         "apiVersion": "2016-04-30-preview",
         "type": "Microsoft.Compute/virtualMachines",
-        "name": "app-vm",
+        "name": "[parameters('vmName')]",
         "location": "[resourceGroup().location]",
         "dependsOn": [
           "[resourceId('Microsoft.Network/networkInterfaces/', 'app-vm-nic')]"
@@ -77,5 +78,11 @@
           }
         }
       }
-    ]
+    ],
+    "outputs": {
+      "vmIp": {
+        "type": "string",
+        "value": "[reference('app-vm-publicip').IpAddress]"
+      }
   }
+}
